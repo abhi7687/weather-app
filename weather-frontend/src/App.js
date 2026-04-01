@@ -24,32 +24,36 @@ function App() {
 
   // 🌍 AUTO LOCATION
   useEffect(() => {
-    if (!navigator.geolocation) {
-      getWeather("Hyderabad");
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-
-        try {
-          setLoading(true);
-          const res = await axios.get(
-            `${process.env.REACT_APP_API_URL}/weather?lat=${latitude}&lon=${longitude}`
-          );
-          setWeather(res.data);
-        } catch (err) {
-          setError("Failed to fetch location weather");
-        } finally {
-          setLoading(false);
-        }
-      },
-      () => {
-        console.log("Location permission denied");
-        getWeather("Hyderabad"); // fallback
+    const fetchLocationWeather = async () => {
+      if (!navigator.geolocation) {
+        getWeather("Hyderabad");
+        return;
       }
-    );
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          try {
+            setLoading(true);
+            const res = await axios.get(
+              `http://localhost:5000/weather?lat=${latitude}&lon=${longitude}`
+            );
+            setWeather(res.data);
+          } catch (err) {
+            setError("Failed to fetch location weather");
+          } finally {
+            setLoading(false);
+          }
+        },
+        () => {
+          console.log("Location permission denied");
+          getWeather("Hyderabad");
+        }
+      );
+    };
+
+    fetchLocationWeather();
   }, []);
 
   // 🔁 HANDLE DISPLAY DATA
@@ -173,9 +177,8 @@ function App() {
             {weather.forecast.map((day, index) => (
               <div
                 key={index}
-                className={`forecast-card ${
-                  selectedDay === index ? "active" : ""
-                }`}
+                className={`forecast-card ${selectedDay === index ? "active" : ""
+                  }`}
                 onClick={() => setSelectedDay(index)}
               >
                 <p className="forecast-day">
