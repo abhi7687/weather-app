@@ -124,6 +124,7 @@ function App() {
         muted
         loop
         playsInline
+        preload="none"
         key={getVideoSrc()}
         className="bg-video"
       >
