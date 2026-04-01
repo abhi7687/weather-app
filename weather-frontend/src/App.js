@@ -48,7 +48,7 @@ function App() {
     setWeather(null);
 
     try {
-      const res = await axios.get(`http://localhost:5000/weather?city=${city}`);
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/weather?city=${city}`)
       setWeather(res.data);
     } catch (err) {
       setError("City not found or server error");
