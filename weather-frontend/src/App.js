@@ -26,7 +26,18 @@ function App() {
   useEffect(() => {
     const fetchLocationWeather = async () => {
       if (!navigator.geolocation) {
-        getWeather("Hyderabad");
+        // fallback without using getWeather
+        try {
+          setLoading(true);
+          const res = await axios.get(
+            `http://localhost:5000/weather?city=Hyderabad`
+          );
+          setWeather(res.data);
+        } catch (err) {
+          setError("Failed to fetch default weather");
+        } finally {
+          setLoading(false);
+        }
         return;
       }
 
@@ -37,7 +48,7 @@ function App() {
           try {
             setLoading(true);
             const res = await axios.get(
-              `http://localhost:5000/weather?lat=${latitude}&lon=${longitude}`
+              `${process.env.REACT_APP_API_URL}/weather?lat=${latitude}&lon=${longitude}`
             );
             setWeather(res.data);
           } catch (err) {
@@ -46,9 +57,19 @@ function App() {
             setLoading(false);
           }
         },
-        () => {
-          console.log("Location permission denied");
-          getWeather("Hyderabad");
+        async () => {
+          // fallback without getWeather
+          try {
+            setLoading(true);
+            const res = await axios.get(
+              `${process.env.REACT_APP_API_URL}/weather?city=Hyderabad`
+            );
+            setWeather(res.data);
+          } catch (err) {
+            setError("Failed to fetch default weather");
+          } finally {
+            setLoading(false);
+          }
         }
       );
     };
