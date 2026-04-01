@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import "./App.css";
 
@@ -22,33 +22,67 @@ function App() {
   const [error, setError] = useState("");
   const [selectedDay, setSelectedDay] = useState(null);
 
+  // 🌍 AUTO LOCATION
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      getWeather("Hyderabad");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        try {
+          setLoading(true);
+          const res = await axios.get(
+            `${process.env.REACT_APP_API_URL}/weather?lat=${latitude}&lon=${longitude}`
+          );
+          setWeather(res.data);
+        } catch (err) {
+          setError("Failed to fetch location weather");
+        } finally {
+          setLoading(false);
+        }
+      },
+      () => {
+        console.log("Location permission denied");
+        getWeather("Hyderabad"); // fallback
+      }
+    );
+  }, []);
+
+  // 🔁 HANDLE DISPLAY DATA
   const displayData =
     weather && selectedDay !== null
       ? weather.forecast[selectedDay]
       : weather;
 
+  // 🎥 VIDEO LOGIC
   const getVideoSrc = () => {
-    if (!displayData) return weatherVideos.default;
+    if (!displayData || !displayData.icon) return weatherVideos.default;
 
-    const iconUrl =
-      selectedDay !== null ? displayData.icon : weather.icon;
-
-    if (!iconUrl) return weatherVideos.default;
-
-    const iconName = iconUrl.split("/").pop();
+    const iconName = displayData.icon.split("/").pop();
     const code = iconName.substring(0, 2);
 
     return weatherVideos[code] || weatherVideos.default;
   };
 
-  const getWeather = async () => {
-    if (!city) return;
+  // 🔍 SEARCH WEATHER
+  const getWeather = async (inputCity) => {
+    const queryCity = inputCity || city;
+    if (!queryCity) return;
+
     setLoading(true);
     setError("");
     setWeather(null);
+    setSelectedDay(null);
 
     try {
-      const res = await axios.get(`${process.env.REACT_APP_API_URL}/weather?city=${city}`)
+      console.log("API:", process.env.REACT_APP_API_URL);
+      const res = await axios.get(
+        `${process.env.REACT_APP_API_URL}/weather?city=${queryCity}`
+      );
       setWeather(res.data);
     } catch (err) {
       setError("City not found or server error");
@@ -59,7 +93,7 @@ function App() {
 
   return (
     <div className="app">
-      {/* Background Video */}
+      {/* 🎥 Background Video */}
       <video
         autoPlay
         muted
@@ -73,7 +107,11 @@ function App() {
 
       <div className="container">
         <h1 className="title">
-          <img src={`${process.env.PUBLIC_URL}/icon.png`} alt="icon" className="icon" />
+          <img
+            src={`${process.env.PUBLIC_URL}/icon.png`}
+            alt="icon"
+            className="icon"
+          />
           Weather
         </h1>
 
@@ -83,12 +121,15 @@ function App() {
             placeholder="Search city..."
             value={city}
             onChange={(e) => setCity(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && getWeather()}
+            onKeyDown={(e) => e.key === "Enter" && getWeather()}
           />
-          <button onClick={getWeather}>
+          <button onClick={() => getWeather()}>
             {loading ? "..." : "Search"}
           </button>
         </div>
+
+        {/* 🔄 Loading State */}
+        {loading && !weather && <p className="error">Detecting your location...</p>}
 
         {error && <p className="error">{error}</p>}
 
@@ -97,17 +138,21 @@ function App() {
             <h2 className="city">{weather.city}</h2>
 
             <img
-              src={selectedDay !== null ? displayData.icon : weather.icon}
-              alt={displayData.desc || displayData.description}
+              src={displayData?.icon}
+              alt={displayData?.desc || displayData?.description}
               className="weather-icon"
             />
 
             <div className="temp">
-              {selectedDay !== null ? displayData.temp : displayData.temperature}°
+              {selectedDay !== null
+                ? displayData.temp
+                : displayData.temperature}°
             </div>
 
             <p className="desc">
-              {selectedDay !== null ? displayData.desc : displayData.description}
+              {selectedDay !== null
+                ? displayData.desc
+                : displayData.description}
             </p>
 
             <div className="details">
@@ -122,16 +167,21 @@ function App() {
             </div>
           </div>
         )}
+
         {weather?.forecast && (
           <div className="forecast">
             {weather.forecast.map((day, index) => (
               <div
                 key={index}
-                className={`forecast-card ${selectedDay === index ? "active" : ""}`}
+                className={`forecast-card ${
+                  selectedDay === index ? "active" : ""
+                }`}
                 onClick={() => setSelectedDay(index)}
               >
                 <p className="forecast-day">
-                  {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
+                  {new Date(day.date).toLocaleDateString("en-US", {
+                    weekday: "short",
+                  })}
                 </p>
 
                 <img src={day.icon} alt="icon" />
